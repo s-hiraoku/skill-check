@@ -1,5 +1,11 @@
 import type { SkillCheckReport } from "./types";
 
+/**
+ * v1 persistence: in-memory only (max 100 reports per server instance).
+ * Data resets on cold start / redeploy. Database persistence is planned for v2.
+ */
+const MAX_REPORTS = 100;
+
 const globalStore = globalThis as typeof globalThis & {
   __skillcheckReports?: SkillCheckReport[];
 };
@@ -14,8 +20,8 @@ function getStore(): SkillCheckReport[] {
 export function saveReport(report: SkillCheckReport): void {
   const store = getStore();
   store.unshift(report);
-  if (store.length > 100) {
-    store.length = 100;
+  if (store.length > MAX_REPORTS) {
+    store.length = MAX_REPORTS;
   }
 }
 
@@ -29,4 +35,8 @@ export function getReport(id: string): SkillCheckReport | undefined {
 
 export function clearReports(): void {
   globalStore.__skillcheckReports = [];
+}
+
+export function getStoreLimits() {
+  return { maxReports: MAX_REPORTS, persistence: "in-memory-v1" as const };
 }

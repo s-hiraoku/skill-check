@@ -99,6 +99,11 @@ export default function Dashboard() {
                 <p className="mt-2 text-sm text-slate-400">
                   {latestReport.overallScore}/{latestReport.maxScore} points · {latestReport.summary}
                 </p>
+                {latestReport.resolvedPath && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Resolved: {latestReport.resolvedPath}
+                  </p>
+                )}
                 <div className="mt-4 space-y-3">
                   {latestReport.checks.map((check) => (
                     <CheckCard key={check.name} check={check} />

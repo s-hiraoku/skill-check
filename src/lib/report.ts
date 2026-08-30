@@ -81,7 +81,7 @@ export function generateHtmlReport(report: SkillCheckReport): string {
     <header class="hero">
       <h1>${escapeHtml(report.name)}</h1>
       <p class="meta">${escapeHtml(report.description)}</p>
-      <p class="meta">Source: ${escapeHtml(report.source)} · ${new Date(report.createdAt).toLocaleString()}</p>
+      <p class="meta">Source: ${escapeHtml(report.source)}${report.resolvedPath ? ` · Resolved: ${escapeHtml(report.resolvedPath)}` : ""} · ${new Date(report.createdAt).toLocaleString()}</p>
     </header>
 
     <div class="summary-box">

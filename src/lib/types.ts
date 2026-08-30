@@ -39,6 +39,8 @@ export interface ParsedSkill {
   metadata: SkillMetadata;
   body: string;
   frontmatterErrors: string[];
+  /** GitHub fetch only: path where SKILL.md was found */
+  resolvedPath?: string;
 }
 
 export interface SkillCheckReport {
@@ -54,6 +56,8 @@ export interface SkillCheckReport {
   grade: "A" | "B" | "C" | "D" | "F";
   checks: CheckResult[];
   summary: string;
+  /** GitHub fetch only: e.g. skills/my-skill/SKILL.md */
+  resolvedPath?: string;
 }
 
 export interface CheckInput {

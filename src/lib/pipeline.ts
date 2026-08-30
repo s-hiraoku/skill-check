@@ -66,6 +66,7 @@ export async function runSkillCheck(input: CheckInput): Promise<SkillCheckReport
     grade: computeGrade(overallScore, maxScore),
     checks,
     summary: buildSummary(checks),
+    resolvedPath: skill.resolvedPath,
   };
 
   return report;
