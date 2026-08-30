@@ -79,9 +79,10 @@ export function SkillInputForm({ onSubmit, loading }: SkillInputFormProps) {
 interface ReportDetailProps {
   report: SkillCheckReport;
   onClose: () => void;
+  onOpenReport?: (report: SkillCheckReport) => void | Promise<void>;
 }
 
-export function ReportDetail({ report, onClose }: ReportDetailProps) {
+export function ReportDetail({ report, onClose, onOpenReport }: ReportDetailProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-16">
       <div className="w-full max-w-2xl rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
@@ -119,14 +120,13 @@ export function ReportDetail({ report, onClose }: ReportDetailProps) {
           ))}
         </div>
 
-        <a
-          href={`/api/results/${report.id}/report`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-4 block text-center text-sm text-indigo-400 hover:text-indigo-300"
+        <button
+          type="button"
+          onClick={() => onOpenReport?.(report)}
+          className="mt-4 block w-full text-center text-sm text-indigo-400 hover:text-indigo-300"
         >
           Open HTML Report ↗
-        </a>
+        </button>
       </div>
     </div>
   );

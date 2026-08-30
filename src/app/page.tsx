@@ -1,30 +1,55 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import type { SkillCheckReport } from "@/lib/types";
 import { StarRating } from "@/components/StarRating";
 import { CheckCard } from "@/components/CheckCard";
 import { SkillInputForm, ReportDetail } from "@/components/SkillInputForm";
+import {
+  loadClientReports,
+  saveClientReport,
+  mergeReports,
+  openHtmlReport,
+} from "@/lib/client-store";
 
 export default function Dashboard() {
   const [reports, setReports] = useState<SkillCheckReport[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<SkillCheckReport | null>(null);
   const [search, setSearch] = useState("");
   const [gradeFilter, setGradeFilter] = useState<string>("all");
   const [latestReport, setLatestReport] = useState<SkillCheckReport | null>(null);
+  const [, startTransition] = useTransition();
 
-  const fetchReports = useCallback(async () => {
-    const res = await fetch("/api/results");
-    if (res.ok) {
-      setReports(await res.json());
+  const refreshReports = useCallback(async () => {
+    const client = loadClientReports();
+    let server: SkillCheckReport[] = [];
+    try {
+      const res = await fetch("/api/results");
+      if (res.ok) {
+        server = await res.json();
+      }
+    } catch {
+      // Offline / cold start — rely on client cache
     }
+    return mergeReports(server, client);
   }, []);
 
   useEffect(() => {
-    fetchReports();
-  }, [fetchReports]);
+    let cancelled = false;
+    refreshReports().then((merged) => {
+      if (cancelled) return;
+      startTransition(() => {
+        setReports(merged);
+        setHydrated(true);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshReports]);
 
   async function handleSubmit(input: { githubUrl?: string; skillMarkdown?: string }) {
     setLoading(true);
@@ -38,11 +63,21 @@ export default function Dashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Check failed");
       setLatestReport(data);
-      await fetchReports();
+      saveClientReport(data);
+      const merged = await refreshReports();
+      setReports(merged);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleOpenReport(report: SkillCheckReport) {
+    try {
+      await openHtmlReport(report);
+    } catch {
+      setError("HTML レポートの生成に失敗しました");
     }
   }
 
@@ -69,7 +104,7 @@ export default function Dashboard() {
             <p className="text-sm text-slate-400">Agent Skills Quality Dashboard</p>
           </div>
           <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-400">
-            {reports.length} checked
+            {hydrated ? `${reports.length} checked` : "…"}
           </span>
         </div>
       </header>
@@ -109,14 +144,13 @@ export default function Dashboard() {
                     <CheckCard key={check.name} check={check} />
                   ))}
                 </div>
-                <a
-                  href={`/api/results/${latestReport.id}/report`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  type="button"
+                  onClick={() => handleOpenReport(latestReport)}
                   className="mt-4 inline-block text-sm text-indigo-400 hover:text-indigo-300"
                 >
                   Download HTML Report ↗
-                </a>
+                </button>
               </div>
             </section>
           )}
@@ -197,7 +231,11 @@ export default function Dashboard() {
       </main>
 
       {selected && (
-        <ReportDetail report={selected} onClose={() => setSelected(null)} />
+        <ReportDetail
+          report={selected}
+          onClose={() => setSelected(null)}
+          onOpenReport={handleOpenReport}
+        />
       )}
     </div>
   );

@@ -1,9 +1,11 @@
+/**
+ * v1 persistence: in-memory best-effort cache (max 100 reports per server instance).
+ * On Vercel, serverless instances do not share this array — the dashboard also
+ * keeps reports in localStorage, and HTML reports are generated via
+ * POST /api/report/html (stateless). Database persistence is planned for v2.
+ */
 import type { SkillCheckReport } from "./types";
 
-/**
- * v1 persistence: in-memory only (max 100 reports per server instance).
- * Data resets on cold start / redeploy. Database persistence is planned for v2.
- */
 const MAX_REPORTS = 100;
 
 const globalStore = globalThis as typeof globalThis & {
@@ -38,5 +40,9 @@ export function clearReports(): void {
 }
 
 export function getStoreLimits() {
-  return { maxReports: MAX_REPORTS, persistence: "in-memory-v1" as const };
+  return {
+    maxReports: MAX_REPORTS,
+    persistence: "in-memory-v1" as const,
+    note: "Use localStorage + POST /api/report/html for cross-instance access on Vercel",
+  };
 }

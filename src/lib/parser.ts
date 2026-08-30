@@ -144,13 +144,41 @@ async function fetchRawFile(
   return response.text();
 }
 
+/** Resolve the repository's actual default branch via GitHub API. */
+export async function getDefaultBranch(owner: string, repo: string): Promise<string | null> {
+  const url = `https://api.github.com/repos/${owner}/${repo}`;
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "SkillCheck/1.0",
+    },
+    next: { revalidate: 0 },
+  });
+
+  if (!response.ok) return null;
+
+  const data: unknown = await response.json();
+  if (
+    typeof data === "object" &&
+    data !== null &&
+    "default_branch" in data &&
+    typeof (data as { default_branch: unknown }).default_branch === "string"
+  ) {
+    return (data as { default_branch: string }).default_branch;
+  }
+  return null;
+}
+
 export async function fetchFromGithub(
   owner: string,
   repo: string,
   branch?: string,
   explicitPath?: string,
 ): Promise<{ content: string; resolvedPath: string; branch: string }> {
-  const branches = branch ? [branch, "main", "master"] : ["main", "master"];
+  const defaultBranch = branch ? null : await getDefaultBranch(owner, repo);
+  const branches = branch
+    ? [branch, "main", "master"]
+    : [defaultBranch, "main", "master"].filter((b): b is string => Boolean(b));
   const uniqueBranches = [...new Set(branches)];
   const triedPaths: string[] = [];
 

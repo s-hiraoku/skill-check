@@ -140,6 +140,19 @@ describe("validateSecurity", () => {
     const result = validateSecurity(skill);
     expect(result.status).toBe("pass");
   });
+
+  it("does not skip matches across successive calls (no lastIndex leak)", () => {
+    const dirty = parseSkillContent(VALID_SKILL + "\n\neval(x)", "test", "paste");
+    const clean = parseSkillContent(VALID_SKILL + "\n\neval(y)", "test", "paste");
+    // First call should set lastIndex if /g were present; second must still match
+    expect(validateSecurity(dirty).issues.some((i) => i.code === "SEC_EVAL")).toBe(true);
+    expect(validateSecurity(clean).issues.some((i) => i.code === "SEC_EVAL")).toBe(true);
+    // Alternating short/long content relative to prior lastIndex
+    const early = parseSkillContent("---\nname: a\ndescription: short\n---\neval(1)\n", "t", "paste");
+    const late = parseSkillContent(VALID_SKILL + "\n\n" + "x".repeat(200) + "\neval(2)", "t", "paste");
+    expect(validateSecurity(late).issues.some((i) => i.code === "SEC_EVAL")).toBe(true);
+    expect(validateSecurity(early).issues.some((i) => i.code === "SEC_EVAL")).toBe(true);
+  });
 });
 
 describe("validateExecution (static analysis v1)", () => {

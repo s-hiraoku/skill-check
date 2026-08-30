@@ -18,9 +18,9 @@ Agent Skills の品質を自動検証・レーティングするダッシュボ�
 
 | 項目 | v1 | v2（予定） |
 |------|----|-----------|
-| 結果の永続化 | インメモリ（最大100件、再デプロイで消える） | データベース |
+| 結果の永続化 | サーバはインメモリ（インスタンスローカル）+ ブラウザの localStorage。HTML は `POST /api/report/html` でステートレス生成 | データベース |
 | 実行テスト | 静的解析のみ | サンドボックスでのスクリプト実行 |
-| GitHub 解決 | 下記の優先順位で SKILL.md を探索 | 複数スキルの選択 UI |
+| GitHub 解決 | 下記の優先順位で SKILL.md を探索（default_branch を API で解決） | 複数スキルの選択 UI |
 
 ### GitHub URL 解決順序
 
@@ -54,14 +54,17 @@ npx vercel
 
 追加設定不要。Next.js App Router の標準構成です。
 
+> **Note (v1):** サーバ側ストアはインスタンスごとに分かれます。ダッシュボードはブラウザの localStorage に結果を保持し、HTML レポートはレポート JSON を渡すステートレス API で生成するため、マルチインスタンスでも最新結果の閲覧とレポート出力ができます。
+
 ## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/check` | スキルを検証 `{ githubUrl }` または `{ skillMarkdown }` |
-| GET | `/api/results` | 全結果一覧 |
+| GET | `/api/results` | 全結果一覧（同一インスタンスのベストエフォート） |
 | GET | `/api/results/:id` | 個別結果 (JSON) |
-| GET | `/api/results/:id/report` | HTML レポート |
+| GET | `/api/results/:id/report` | HTML レポート（同一インスタンス） |
+| POST | `/api/report/html` | HTML レポート（ステートレス、レポート JSON を body に渡す） |
 
 ## スコアリング
 
@@ -75,6 +78,8 @@ npx vercel
 | **合計** | **100** |
 
 星評価: 90%+ → ★5, 75%+ → ★4, 60%+ → ★3, 40%+ → ★2, それ以下 → ★1
+
+安全キャップ: Security Scan が fail のとき最大 Grade C / ★3。critical 指摘があるときは最大 Grade D / ★2。
 
 ## Cursor プロンプト（改善版）
 

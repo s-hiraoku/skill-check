@@ -4,7 +4,15 @@ import { validateDependencies } from "./validators/dependencies";
 import { validateSecurity } from "./validators/security";
 import { validateExecution } from "./validators/execution";
 import { validateQuality } from "./validators/quality";
-import type { CheckInput, SkillCheckReport } from "./types";
+import type { CheckInput, CheckResult, SkillCheckReport } from "./types";
+
+const GRADE_RANK: Record<SkillCheckReport["grade"], number> = {
+  A: 4,
+  B: 3,
+  C: 2,
+  D: 1,
+  F: 0,
+};
 
 function computeStars(score: number, maxScore: number): number {
   const ratio = score / maxScore;
@@ -22,6 +30,37 @@ function computeGrade(score: number, maxScore: number): SkillCheckReport["grade"
   if (ratio >= 0.6) return "C";
   if (ratio >= 0.4) return "D";
   return "F";
+}
+
+/**
+ * Safety signal override: failed / critical security findings must not show as A/★★★★★.
+ * - Any critical issue → max grade D, max 2 stars
+ * - Security Scan fail → max grade C, max 3 stars
+ */
+export function applySafetyCaps(
+  stars: number,
+  grade: SkillCheckReport["grade"],
+  checks: CheckResult[],
+): { stars: number; grade: SkillCheckReport["grade"] } {
+  let cappedStars = stars;
+  let cappedGrade = grade;
+
+  const hasCritical = checks.some((c) => c.issues.some((i) => i.severity === "critical"));
+  const securityFailed = checks.some((c) => c.name === "Security Scan" && c.status === "fail");
+
+  if (hasCritical) {
+    cappedStars = Math.min(cappedStars, 2);
+    if (GRADE_RANK[cappedGrade] > GRADE_RANK.D) {
+      cappedGrade = "D";
+    }
+  } else if (securityFailed) {
+    cappedStars = Math.min(cappedStars, 3);
+    if (GRADE_RANK[cappedGrade] > GRADE_RANK.C) {
+      cappedGrade = "C";
+    }
+  }
+
+  return { stars: cappedStars, grade: cappedGrade };
 }
 
 function buildSummary(checks: SkillCheckReport["checks"]): string {
@@ -53,6 +92,12 @@ export async function runSkillCheck(input: CheckInput): Promise<SkillCheckReport
   const name = typeof skill.metadata.name === "string" ? skill.metadata.name : "unknown-skill";
   const description = typeof skill.metadata.description === "string" ? skill.metadata.description : "";
 
+  const { stars, grade } = applySafetyCaps(
+    computeStars(overallScore, maxScore),
+    computeGrade(overallScore, maxScore),
+    checks,
+  );
+
   const report: SkillCheckReport = {
     id: crypto.randomUUID(),
     name,
@@ -60,10 +105,10 @@ export async function runSkillCheck(input: CheckInput): Promise<SkillCheckReport
     source: skill.source,
     sourceType: skill.sourceType,
     createdAt: new Date().toISOString(),
-    stars: computeStars(overallScore, maxScore),
+    stars,
     overallScore,
     maxScore,
-    grade: computeGrade(overallScore, maxScore),
+    grade,
     checks,
     summary: buildSummary(checks),
     resolvedPath: skill.resolvedPath,

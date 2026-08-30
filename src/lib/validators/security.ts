@@ -1,14 +1,15 @@
 import type { CheckIssue, CheckResult, ParsedSkill } from "../types";
 
+/** Patterns must NOT use the global flag — RegExp.test() mutates lastIndex with /g. */
 const SECURITY_PATTERNS: Array<{ pattern: RegExp; code: string; message: string; severity: CheckIssue["severity"] }> = [
-  { pattern: /\beval\s*\(/gi, code: "SEC_EVAL", message: "Contains eval() — potential code injection risk", severity: "critical" },
-  { pattern: /\bexec\s*\(/gi, code: "SEC_EXEC", message: "Contains exec() — review for shell injection", severity: "error" },
-  { pattern: /rm\s+-rf\s+\/(?:\s|$)/gi, code: "SEC_RM_RF", message: "Contains destructive rm -rf / command", severity: "critical" },
-  { pattern: /(?:api[_-]?key|secret|password|token)\s*[:=]\s*['"][^'"]{8,}['"]/gi, code: "SEC_HARDCODED", message: "Possible hardcoded secret detected", severity: "critical" },
-  { pattern: /curl\b[^\n]*\|\s*(ba)?sh/gi, code: "SEC_CURL_PIPE", message: "curl | bash pattern — high trust requirement", severity: "warning" },
-  { pattern: /sudo\s+/gi, code: "SEC_SUDO", message: "References sudo — requires elevated privileges", severity: "warning" },
-  { pattern: /chmod\s+[0-7]{3,4}/gi, code: "SEC_CHMOD", message: "References chmod — verify permission changes", severity: "info" },
-  { pattern: />\s*\/etc\//gi, code: "SEC_ETC_WRITE", message: "Potential write to /etc/ path", severity: "error" },
+  { pattern: /\beval\s*\(/i, code: "SEC_EVAL", message: "Contains eval() — potential code injection risk", severity: "critical" },
+  { pattern: /\bexec\s*\(/i, code: "SEC_EXEC", message: "Contains exec() — review for shell injection", severity: "error" },
+  { pattern: /rm\s+-rf\s+\/(?:\s|$)/i, code: "SEC_RM_RF", message: "Contains destructive rm -rf / command", severity: "critical" },
+  { pattern: /(?:api[_-]?key|secret|password|token)\s*[:=]\s*['"][^'"]{8,}['"]/i, code: "SEC_HARDCODED", message: "Possible hardcoded secret detected", severity: "critical" },
+  { pattern: /curl\b[^\n]*\|\s*(ba)?sh/i, code: "SEC_CURL_PIPE", message: "curl | bash pattern — high trust requirement", severity: "warning" },
+  { pattern: /sudo\s+/i, code: "SEC_SUDO", message: "References sudo — requires elevated privileges", severity: "warning" },
+  { pattern: /chmod\s+[0-7]{3,4}/i, code: "SEC_CHMOD", message: "References chmod — verify permission changes", severity: "info" },
+  { pattern: />\s*\/etc\//i, code: "SEC_ETC_WRITE", message: "Potential write to /etc/ path", severity: "error" },
 ];
 
 const OFFENSIVE_DISCLAIMER = /AUTHORIZED USE ONLY/i;
